@@ -143,6 +143,12 @@
                         </select>
                     </div>
                 </form>
+                <div class="mt-4 border-top pt-3">
+                <h6 class="text-primary"><i class="bi bi-clock-history"></i> Transfer History</h6>
+                <ul id="history-list" class="list-group list-group-flush small">
+                    <li class="list-group-item text-muted font-italic">History loading...</li>
+                </ul>
+            </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -322,21 +328,52 @@
         }
     }
 
-    function modifyPlayer(id) {
-        const player = playersData.find(p => p.id == id);
+    async function modifyPlayer(id) {
+        $('#editModal').modal('show');
         
-        if (!player) {
-            showMsg("Player not found!", "error");
-            return;
+        const historyList = document.getElementById("history-list");
+        historyList.innerHTML = "<li class='list-group-item text-center text-muted'><div class='spinner-border spinner-border-sm'></div> loading....</li>";
+        document.getElementById("edit-id").value = id;
+        document.getElementById("edit-name").value = "Loading..."
+        
+        try {
+            const response = await fetch(API_URL + "?id=" + id);
+            const data = await response.json();
+
+            document.getElementById("edit-id").value = data.player.id;
+            document.getElementById("edit-name").value = data.player.name;
+            document.getElementById("edit-position").value = data.player.position;
+            document.getElementById("edit-team").value = data.player.team ? data.player.team : "";
+
+            historyList.innerHTML = "";
+
+            if(!data.history  || data.history.lenght === 0){
+                historyList.innerHTML = "<li class='list-group-item text-muted font-italic'>No old transfers.</li>";
+            } else{
+                data.history.forEach(hist => {
+                    let dateObj = new Date(hist.date);
+                    let dateStr = dateObj.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                    historyList.innerHTML += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <span>
+                                <i class="bi bi-shield-shaded text-secondary"></i> 
+                                ${hist.team_name}
+                            </span>
+                            <span class="badge badge-light border">${dateStr}</span>
+                        </li>
+                    `;
+
+                });
+            }
+
+        } catch (err){
+            console.error(err);
+            historyList.innerHTML = "<li class='list-group-item text-danger'>Loading error.</li>";
+            alert("error to get players: " + err.message);
         }
 
-        document.getElementById("edit-id").value = player.id;
-        document.getElementById("edit-name").value = player.name;
-        document.getElementById("edit-position").value = player.position;
-        document.getElementById("edit-team").value = player.team; 
 
-        
-        $('#editModal').modal('show');
     }
 
     

@@ -11,6 +11,27 @@ $input = json_decode(file_get_contents("php://input"),true);
 try{
     switch($method){
         case "GET":
+
+            if(isset($_GET["id"])){
+                $playerId = $_GET["id"];
+
+                $stmt = $pdo -> prepare("SELECT * FROM soccer_player WHERE id = ?");
+                $stmt -> execute([$playerId]);
+                $playerData = $stmt -> fetch();
+
+                $sqlHistory = " SELECT *, t.name as team_name 
+                                FROM player_history h 
+                                LEFT JOIN team t ON h.team_id = t.id 
+                                WHERE h.name_id = ? 
+                                ORDER BY h.date DESC LIMIT 3"; 
+                $stmtHistory = $pdo -> prepare($sqlHistory);
+                $stmtHistory -> execute([$playerId]);
+                $playerHistory = $stmtHistory -> fetchAll();
+
+                echo json_encode(["player" => $playerData, "history" => $playerHistory]);
+                exit;
+            }
+
             if (isset($_GET["list_teams"])){
                 $stmt = $pdo-> query("SELECT * FROM team ORDER BY name ASC");
                 echo json_encode($stmt->fetchAll());
@@ -64,6 +85,7 @@ try{
                         $stmtHistory -> execute([$playerId, $oldTeam]);
                     }
                 }
+
 
                 $sqlUpdate = "UPDATE soccer_player SET name = ?, position=?, team=? WHERE id=?;";
                 $stmtUpdate = $pdo -> prepare($sqlUpdate);
