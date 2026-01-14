@@ -39,10 +39,44 @@ try{
             if (!isset($input["name"]) || (!isset($input["team"])) || (!isset($input["position"]))){
                 throw new Exception("Missing some data!!");
             }
-            $sql = "UPDATE soccer_player SET name = ?, position=?, team=? WHERE id=?;";
-            $stmt = $pdo -> prepare($sql);
-            $stmt -> execute([$input["name"], $input["position"], $input["team"], $input["id"]]);
-            echo json_encode(["message" => "Player modify succesfully"]);
+
+            $playerId = $input["id"];
+            $playerName = $input["name"];
+            $playerPosition = $input["position"];
+            $playerTeam = $input["team"];
+
+            try{
+                $pdo -> beginTransaction();
+                $stmtGet = $pdo -> prepare("SELECT * FROM soccer_player WHERE id = ?");
+                $stmtGet -> execute([$playerId]);
+                $currentData = $stmtGet -> fetch();
+
+                if(!$currentData){
+                    throw new Exception("Player not found");
+                }
+
+                $oldTeam = $currentData["team"];
+
+                if($oldTeam != $playerTeam){
+                    if($oldTeam){
+                        $sqlHistory = "INSERT INTO player_history(name_id, team_id , date) VALUES (?, ?, NOW())";
+                        $stmtHistory = $pdo -> prepare($sqlHistory);
+                        $stmtHistory -> execute([$playerId, $oldTeam]);
+                    }
+                }
+
+                $sqlUpdate = "UPDATE soccer_player SET name = ?, position=?, team=? WHERE id=?;";
+                $stmtUpdate = $pdo -> prepare($sqlUpdate);
+                $stmtUpdate -> execute([$playerName, $playerPosition , $playerTeam, $playerId]);
+
+                $pdo -> commit();
+                echo json_encode(["message" => "Player update succesfull"]);
+
+            } catch(Exception $err){
+                $pdo -> rollBack();
+                throw $err;
+            }
+            
             break;
 
         case "DELETE":
